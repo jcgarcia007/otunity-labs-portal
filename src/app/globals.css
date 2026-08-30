@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* ─── Tokens de color del portal ─────────────────────────── */
+:root {
+  --color-brand: #5C7CFA;
+  --color-brand-dark: #4A6AE8;
+  --color-brand-light: rgba(92, 124, 250, 0.12);
+  --color-success: #1D9E75;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+/* ─── Base ────────────────────────────────────────────────── */
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-gray-950 text-white;
+  }
+}
