@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { signIn } from '@/services/auth'
+import InvisibleCaptcha, {
+  type InvisibleCaptchaHandle,
+} from '@/components/InvisibleCaptcha'
 
-// Estilos reutilizables del design system de la pantalla de login
+// Estilos del design system del login (reutilizados del page.tsx)
 const labelStyle: React.CSSProperties = {
   display:       'block',
   fontFamily:    'var(--font-mono), monospace',
@@ -30,14 +33,28 @@ const inputStyle: React.CSSProperties = {
 
 export function LoginForm() {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError]     = useState<string | null>(null)
+  const captchaRef = useRef<InvisibleCaptchaHandle>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    // 1. Obtener token de CAPTCHA (antes de llamar a auth)
+    const captcha =
+      (await captchaRef.current?.getToken()) ?? { status: 'disabled' as const }
+
+    if (captcha.status === 'failed') {
+      setError('Verificación de seguridad fallida. Intenta de nuevo.')
+      setLoading(false)
+      return
+    }
+
+    // 2. Añadir token al FormData y llamar a la Server Action
     const formData = new FormData(e.currentTarget)
+    if (captcha.status === 'ok') formData.set('captchaToken', captcha.token)
+
     const result = await signIn(formData)
 
     if (result?.error) {
@@ -86,6 +103,9 @@ export function LoginForm() {
         />
       </div>
 
+      {/* ── hCaptcha invisible ─────────────────── */}
+      <InvisibleCaptcha ref={captchaRef} />
+
       {/* ── Error ──────────────────────────────── */}
       {error && (
         <p
@@ -110,23 +130,23 @@ export function LoginForm() {
         disabled={loading}
         className="ol-btn"
         style={{
-          width:          '100%',
-          backgroundColor:'var(--culture, #2FD3B8)',
-          color:          'var(--void, #05090C)',
-          fontFamily:     'var(--font-instrument), system-ui, sans-serif',
-          fontWeight:     600,
-          fontSize:       '14px',
-          borderRadius:   '3px',
-          padding:        '13px 20px',
-          border:         'none',
-          cursor:         loading ? 'not-allowed' : 'pointer',
-          opacity:        loading ? 0.65 : 1,
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          gap:            '6px',
-          transition:     'background .15s',
-          marginTop:      '4px',
+          width:           '100%',
+          backgroundColor: 'var(--culture, #2FD3B8)',
+          color:           'var(--void, #05090C)',
+          fontFamily:      'var(--font-instrument), system-ui, sans-serif',
+          fontWeight:      600,
+          fontSize:        '14px',
+          borderRadius:    '3px',
+          padding:         '13px 20px',
+          border:          'none',
+          cursor:          loading ? 'not-allowed' : 'pointer',
+          opacity:         loading ? 0.65 : 1,
+          display:         'flex',
+          alignItems:      'center',
+          justifyContent:  'center',
+          gap:             '6px',
+          transition:      'background .15s',
+          marginTop:       '4px',
         }}
       >
         {loading ? (

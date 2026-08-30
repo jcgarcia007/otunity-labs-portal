@@ -5,11 +5,16 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
 export async function signIn(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  const email          = formData.get('email')        as string
+  const password       = formData.get('password')     as string
+  const captchaToken   = (formData.get('captchaToken') as string | null) ?? undefined
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    options: { captchaToken },
+  })
 
   if (error) {
     return { error: error.message }
@@ -20,9 +25,10 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const nombre = formData.get('nombre') as string
+  const email        = formData.get('email')        as string
+  const password     = formData.get('password')     as string
+  const nombre       = formData.get('nombre')       as string
+  const captchaToken = (formData.get('captchaToken') as string | null) ?? undefined
 
   const supabase = await createClient()
   const { error } = await supabase.auth.signUp({
@@ -30,7 +36,8 @@ export async function signUp(formData: FormData) {
     password,
     options: {
       data: { nombre },
-      // emailRedirectTo: undefined — confirmación desactivada en Fase 1
+      captchaToken,
+      // confirmación de email desactivada en Fase 1
     },
   })
 
