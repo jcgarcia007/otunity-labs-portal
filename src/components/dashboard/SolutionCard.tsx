@@ -3,34 +3,40 @@
 import { useState } from 'react'
 import {
   MapPin, Sparkles, Users, Calculator, Box, Globe,
-  CheckCircle2, Settings, type LucideIcon,
+  CheckCircle2, type LucideIcon,
 } from 'lucide-react'
-import { cn, formatPrecio } from '@/lib/utils'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
+import { formatPrecio } from '@/lib/utils'
 import { createSubscription } from '@/services/subscriptions'
 import type { SolutionWithSubscription } from '@/lib/types'
 
-// Mapa de nombres de ícono (DB) → componente Lucide
+/* ── Iconos ───────────────────────────────────────────────────── */
 const ICON_MAP: Record<string, LucideIcon> = {
-  'map-pin': MapPin,
-  sparkles: Sparkles,
-  users: Users,
-  calculator: Calculator,
-  box: Box,
-  globe: Globe,
+  'map-pin':   MapPin,
+  sparkles:    Sparkles,
+  users:       Users,
+  calculator:  Calculator,
+  box:         Box,
+  globe:       Globe,
 }
 
-interface SolutionCardProps {
-  solution: SolutionWithSubscription
+/* ── Acento por categoría ─────────────────────────────────────── */
+const CAT_COLOR: Record<string, string> = {
+  Comunidad:     '#2FD3B8',  // culture/teal
+  Productividad: '#9B5EE8',  // purple
+  Ventas:        '#5C7CFA',  // brand blue
+  Finanzas:      '#D97706',  // gold
+  Operaciones:   '#FF6A3D',  // reagent/orange
+  Marketing:     '#1D9E75',  // success/green
 }
 
-export function SolutionCard({ solution }: SolutionCardProps) {
+/* ── Componente ───────────────────────────────────────────────── */
+export function SolutionCard({ solution }: { solution: SolutionWithSubscription }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error,   setError]   = useState<string | null>(null)
 
-  const Icon = ICON_MAP[solution.icono] ?? Globe
+  const Icon    = ICON_MAP[solution.icono] ?? Globe
   const isActive = solution.subscription?.estado === 'active'
+  const accent  = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
 
   async function handleContratar() {
     setLoading(true)
@@ -42,71 +48,169 @@ export function SolutionCard({ solution }: SolutionCardProps) {
 
   return (
     <div
-      className={cn(
-        'relative flex flex-col rounded-2xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md dark:bg-white/5',
-        solution.destacada
-          ? 'border-brand dark:border-brand'
-          : 'border-gray-100 dark:border-white/8'
-      )}
+      style={{
+        position:        'relative',
+        display:         'flex',
+        flexDirection:   'column',
+        backgroundColor: 'var(--chamber)',
+        border:          `1px solid ${isActive ? 'rgba(47,211,184,.45)' : 'var(--line)'}`,
+        borderRadius:    '6px',
+        padding:         '20px',
+        transition:      'border-color .2s, box-shadow .2s',
+        boxShadow:       isActive
+          ? '0 0 0 1px rgba(47,211,184,.1), 0 4px 20px rgba(47,211,184,.06)'
+          : 'none',
+      }}
     >
       {/* Badge "Destacada" */}
-      {solution.destacada && (
-        <div className="absolute -top-3 left-5">
-          <Badge variant="brand">⭐ Destacada</Badge>
+      {solution.destacada && !isActive && (
+        <div style={{
+          position:        'absolute',
+          top:             '-1px',
+          right:           '18px',
+          backgroundColor: accent,
+          color:           '#05090C',
+          fontSize:        '9px',
+          fontFamily:      'monospace',
+          fontWeight:      700,
+          textTransform:   'uppercase',
+          letterSpacing:   '.12em',
+          padding:         '3px 10px',
+          borderRadius:    '0 0 5px 5px',
+        }}>
+          Destacada
         </div>
       )}
 
-      {/* Cabecera: ícono + nombre + categoría */}
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-light dark:bg-brand/20">
-          <Icon size={22} className="text-brand" />
+      {/* ── Cabecera ────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '12px' }}>
+
+        {/* Ícono con color de categoría */}
+        <div style={{
+          width:           '40px',
+          height:          '40px',
+          borderRadius:    '8px',
+          backgroundColor: `${accent}18`,
+          border:          `1px solid ${accent}35`,
+          display:         'flex',
+          alignItems:      'center',
+          justifyContent:  'center',
+          flexShrink:      0,
+        }}>
+          <Icon size={18} style={{ color: accent }} />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '2px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--clear)', margin: 0 }}>
               {solution.nombre}
             </h3>
             {isActive && (
-              <Badge variant="success">
-                <CheckCircle2 size={11} />
+              <span style={{
+                display:         'inline-flex',
+                alignItems:      'center',
+                gap:             '4px',
+                fontSize:        '10px',
+                fontFamily:      'monospace',
+                textTransform:   'uppercase',
+                letterSpacing:   '.08em',
+                color:           'var(--culture)',
+                backgroundColor: 'rgba(47,211,184,.1)',
+                border:          '1px solid rgba(47,211,184,.25)',
+                borderRadius:    '3px',
+                padding:         '2px 7px',
+              }}>
+                <CheckCircle2 size={9} />
                 Activa
-              </Badge>
+              </span>
             )}
           </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500">
+          <span style={{
+            fontSize:      '10.5px',
+            fontFamily:    'monospace',
+            textTransform: 'uppercase',
+            letterSpacing: '.1em',
+            color:         accent,
+            opacity:       0.85,
+          }}>
             {solution.categoria}
           </span>
         </div>
       </div>
 
-      {/* Descripción */}
-      <p className="mt-3 text-sm leading-relaxed text-gray-500 dark:text-gray-400 flex-1">
+      {/* ── Descripción ─────────────────────────── */}
+      <p style={{
+        fontSize:    '13px',
+        lineHeight:  1.65,
+        color:       'var(--haze)',
+        margin:      '0 0 16px',
+        flex:        1,
+      }}>
         {solution.descripcion}
       </p>
 
-      {/* Precio + acción */}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      {/* ── Footer: precio + CTA ─────────────────── */}
+      <div style={{
+        display:         'flex',
+        alignItems:      'center',
+        justifyContent:  'space-between',
+        gap:             '12px',
+        paddingTop:      '14px',
+        borderTop:       '1px solid var(--line)',
+      }}>
         <div>
-          <span className="text-2xl font-bold text-gray-900 dark:text-white">
+          <span style={{ fontSize: '22px', fontWeight: 700, color: 'var(--clear)', letterSpacing: '-.02em' }}>
             {formatPrecio(solution.precio_mensual)}
           </span>
-          <span className="text-sm text-gray-400">/mes</span>
+          <span style={{ fontSize: '12px', color: 'var(--dim)', marginLeft: '2px' }}>/mes</span>
         </div>
 
         {isActive ? (
-          <Button variant="outline" size="sm" disabled>
-            <Settings size={14} />
-            Gestionar
-          </Button>
+          <button
+            disabled
+            style={{
+              fontSize:        '11.5px',
+              fontFamily:      'monospace',
+              textTransform:   'uppercase',
+              letterSpacing:   '.1em',
+              color:           'var(--culture)',
+              background:      'rgba(47,211,184,.08)',
+              border:          '1px solid rgba(47,211,184,.22)',
+              borderRadius:    '4px',
+              padding:         '7px 14px',
+              cursor:          'default',
+            }}
+          >
+            Gestionar →
+          </button>
         ) : (
-          <Button size="sm" loading={loading} onClick={handleContratar}>
-            Contratar
-          </Button>
+          <button
+            onClick={handleContratar}
+            disabled={loading}
+            style={{
+              fontSize:        '13px',
+              fontWeight:      600,
+              color:           '#05090C',
+              backgroundColor: loading ? 'rgba(47,211,184,.65)' : 'var(--culture)',
+              border:          'none',
+              borderRadius:    '4px',
+              padding:         '8px 18px',
+              cursor:          loading ? 'not-allowed' : 'pointer',
+              transition:      'background .15s',
+              display:         'flex',
+              alignItems:      'center',
+              gap:             '5px',
+            }}
+          >
+            {loading ? 'Procesando...' : 'Contratar →'}
+          </button>
         )}
       </div>
 
       {error && (
-        <p className="mt-2 text-xs text-red-500">{error}</p>
+        <p style={{ marginTop: '8px', fontSize: '12px', color: 'var(--reagent)' }}>
+          {error}
+        </p>
       )}
     </div>
   )
