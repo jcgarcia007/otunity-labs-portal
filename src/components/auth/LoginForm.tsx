@@ -38,10 +38,13 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    // Capturar el form ANTES del primer await:
+    // React nullifica e.currentTarget cuando el handler cede control al await.
+    const formData = new FormData(e.currentTarget)
     setLoading(true)
     setError(null)
 
-    // 1. Obtener token de CAPTCHA (antes de llamar a auth)
+    // 1. Obtener token de CAPTCHA
     const captcha =
       (await captchaRef.current?.getToken()) ?? { status: 'disabled' as const }
 
@@ -52,7 +55,6 @@ export function LoginForm() {
     }
 
     // 2. Añadir token al FormData y llamar a la Server Action
-    const formData = new FormData(e.currentTarget)
     if (captcha.status === 'ok') formData.set('captchaToken', captcha.token)
 
     const result = await signIn(formData)
