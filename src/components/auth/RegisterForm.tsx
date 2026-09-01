@@ -6,12 +6,13 @@ import InvisibleCaptcha, {
   type InvisibleCaptchaHandle,
 } from '@/components/InvisibleCaptcha'
 
+// Estilos del design system — idénticos al LoginForm
 const labelStyle: React.CSSProperties = {
   display:       'block',
   fontFamily:    'var(--font-mono), monospace',
   fontSize:      '10.5px',
   fontWeight:    400,
-  color:         '#8299A2',
+  color:         'var(--haze, #8299A2)',
   textTransform: 'uppercase',
   letterSpacing: '.13em',
   marginBottom:  '7px',
@@ -19,32 +20,36 @@ const labelStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   width:           '100%',
-  backgroundColor: 'rgba(255,255,255,.04)',
-  border:          '1px solid #1E2A30',
-  borderRadius:    '6px',
-  padding:         '11px 14px',
-  color:           '#E9F2F3',
+  backgroundColor: 'rgba(255,255,255,.035)',
+  border:          '1px solid var(--line, #1B282F)',
+  borderRadius:    '3px',
+  padding:         '12px 13px',
+  color:           'var(--clear, #E9F2F3)',
   fontSize:        '14px',
-  fontFamily:      'system-ui, sans-serif',
-  transition:      'border-color .15s',
+  fontFamily:      'var(--font-instrument), system-ui, sans-serif',
+  transition:      'border-color .15s, background .15s',
   boxSizing:       'border-box' as const,
 }
 
 export function RegisterForm() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
+  const [password, setPassword] = useState('')
+  const [confirm,  setConfirm]  = useState('')
   const captchaRef = useRef<InvisibleCaptchaHandle>(null)
+
+  const passwordsMatch    = confirm.length > 0 && password === confirm
+  const passwordsMismatch = confirm.length > 0 && password !== confirm
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    // Capturar el form ANTES del primer await:
+    // React nullifica e.currentTarget cuando el handler cede control al await.
+    const formData = new FormData(e.currentTarget)
     setLoading(true)
     setError(null)
 
-    // Validaciones locales
-    const formData = new FormData(e.currentTarget)
-    const password = formData.get('password') as string
-    const confirm  = formData.get('confirm')  as string
-
+    // Defense-in-depth: validar contraseñas aunque la UI ya lo bloquea
     if (password !== confirm) {
       setError('Las contraseñas no coinciden.')
       setLoading(false)
@@ -56,7 +61,7 @@ export function RegisterForm() {
       return
     }
 
-    // 1. Obtener token de CAPTCHA antes de llamar a auth
+    // 1. Obtener token de CAPTCHA
     const captcha =
       (await captchaRef.current?.getToken()) ?? { status: 'disabled' as const }
 
@@ -82,8 +87,20 @@ export function RegisterForm() {
     // Sin error → signUp() hace redirect() internamente
   }
 
+  // Estilo dinámico del input de confirmación según estado
+  const confirmInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    paddingRight: '38px', // espacio para el checkmark
+    ...(passwordsMatch    && { border: '1px solid #2FD3B8' }),
+    ...(passwordsMismatch && { border: '1px solid rgba(255,106,61,.6)' }),
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}
+    >
+      {/* ── Nombre completo ────────────────────── */}
       <div>
         <label htmlFor="reg-nombre" style={labelStyle}>Nombre completo</label>
         <input
@@ -98,6 +115,7 @@ export function RegisterForm() {
         />
       </div>
 
+      {/* ── Email ──────────────────────────────── */}
       <div>
         <label htmlFor="reg-email" style={labelStyle}>Email</label>
         <input
@@ -112,6 +130,7 @@ export function RegisterForm() {
         />
       </div>
 
+      {/* ── Contraseña ─────────────────────────── */}
       <div>
         <label htmlFor="reg-password" style={labelStyle}>Contraseña</label>
         <input
@@ -123,44 +142,156 @@ export function RegisterForm() {
           autoComplete="new-password"
           className="ol-input"
           style={inputStyle}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
         />
       </div>
 
+      {/* ── Confirmar contraseña ────────────────── */}
       <div>
         <label htmlFor="reg-confirm" style={labelStyle}>Confirmar contraseña</label>
-        <input
-          id="reg-confirm"
-          name="confirm"
-          type="password"
-          placeholder="Repite tu contraseña"
-          required
-          autoComplete="new-password"
-          className="ol-input"
-          style={inputStyle}
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            id="reg-confirm"
+            name="confirm"
+            type="password"
+            placeholder="Repite tu contraseña"
+            required
+            autoComplete="new-password"
+            className="ol-input"
+            style={confirmInputStyle}
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+          />
+          {/* Checkmark cuando coinciden */}
+          {passwordsMatch && (
+            <span
+              aria-hidden
+              style={{
+                position:  'absolute',
+                right:     '12px',
+                top:       '50%',
+                transform: 'translateY(-50%)',
+                color:     'var(--culture, #2FD3B8)',
+                fontSize:  '14px',
+                fontWeight: 600,
+                lineHeight: 1,
+                pointerEvents: 'none',
+              }}
+            >
+              ✓
+            </span>
+          )}
+        </div>
+        {/* Feedback de validación */}
+        {passwordsMatch && (
+          <p
+            style={{
+              marginTop:  '5px',
+              fontSize:   '11.5px',
+              color:      'var(--culture, #2FD3B8)',
+              fontFamily: 'var(--font-instrument), system-ui, sans-serif',
+            }}
+          >
+            Las contraseñas coinciden
+          </p>
+        )}
+        {passwordsMismatch && (
+          <p
+            style={{
+              marginTop:  '5px',
+              fontSize:   '11.5px',
+              color:      'var(--reagent, #FF6A3D)',
+              fontFamily: 'var(--font-instrument), system-ui, sans-serif',
+            }}
+          >
+            Las contraseñas no coinciden
+          </p>
+        )}
       </div>
 
-      {/* hCaptcha invisible */}
+      {/* ── hCaptcha invisible ─────────────────── */}
       <InvisibleCaptcha ref={captchaRef} />
 
+      {/* ── Error ──────────────────────────────── */}
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+        <p
+          role="alert"
+          style={{
+            fontSize:        '12.5px',
+            color:           'var(--reagent, #FF6A3D)',
+            padding:         '10px 12px',
+            border:          '1px solid rgba(255,106,61,.2)',
+            borderRadius:    '3px',
+            backgroundColor: 'rgba(255,106,61,.06)',
+            fontFamily:      'var(--font-instrument), system-ui, sans-serif',
+          }}
+        >
           {error}
         </p>
       )}
 
+      {/* ── Botón ──────────────────────────────── */}
       <button
         type="submit"
-        disabled={loading}
-        className="mt-1 w-full rounded-xl bg-brand py-2.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={loading || passwordsMismatch}
+        className="ol-btn"
+        style={{
+          width:           '100%',
+          backgroundColor: 'var(--culture, #2FD3B8)',
+          color:           'var(--void, #05090C)',
+          fontFamily:      'var(--font-instrument), system-ui, sans-serif',
+          fontWeight:      600,
+          fontSize:        '14px',
+          borderRadius:    '3px',
+          padding:         '13px 20px',
+          border:          'none',
+          cursor:          (loading || passwordsMismatch) ? 'not-allowed' : 'pointer',
+          opacity:         (loading || passwordsMismatch) ? 0.65 : 1,
+          display:         'flex',
+          alignItems:      'center',
+          justifyContent:  'center',
+          gap:             '6px',
+          transition:      'background .15s',
+          marginTop:       '4px',
+        }}
       >
-        {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+        {loading ? (
+          'Creando cuenta...'
+        ) : (
+          <>
+            Crear cuenta
+            <span
+              className="ol-arrow"
+              style={{ display: 'inline-block', transition: 'transform .2s ease' }}
+            >
+              →
+            </span>
+          </>
+        )}
       </button>
 
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+      {/* ── Enlace a login ─────────────────────── */}
+      <p
+        style={{
+          textAlign:  'center',
+          fontSize:   '13px',
+          color:      'var(--haze, #8299A2)',
+          fontFamily: 'var(--font-instrument), system-ui, sans-serif',
+          marginTop:  '4px',
+        }}
+      >
         ¿Ya tienes cuenta?{' '}
-        <a href="/login" className="font-medium text-brand hover:underline">
-          Inicia sesión
+        <a
+          href="/login"
+          style={{
+            color:          'var(--culture, #2FD3B8)',
+            textDecoration: 'none',
+            borderBottom:   '1px solid rgba(47,211,184,.34)',
+            paddingBottom:  '1px',
+          }}
+        >
+          Iniciar sesión
         </a>
       </p>
     </form>
