@@ -31,14 +31,28 @@ const CAT_COLOR: Record<string, string> = {
 
 /* ── Componente ───────────────────────────────────────────────── */
 export function SolutionCard({ solution }: { solution: SolutionWithSubscription }) {
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState<string | null>(null)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState<string | null>(null)
+  const [jchatMessage, setJchatMessage] = useState(false)
 
-  const Icon    = ICON_MAP[solution.icono] ?? Globe
-  const isActive = solution.subscription?.estado === 'active'
-  const accent  = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
+  const Icon     = ICON_MAP[solution.icono] ?? Globe
+  const isJChat  = solution.nombre.toLowerCase() === 'jchat'
+  // JChat activo si: dueño de JChat (puente) O tiene suscripción de Otunity
+  const isActive = isJChat
+    ? !!(solution.jchatOwner || solution.subscription?.estado === 'active')
+    : solution.subscription?.estado === 'active'
+  const accent   = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
+
+  function handleGestionarJChat() {
+    window.open('https://jchat.cloud/dashboard', '_blank', 'noopener,noreferrer')
+  }
 
   async function handleContratar() {
+    // JChat no se contrata desde Otunity — los usuarios sociales ven un mensaje
+    if (isJChat) {
+      setJchatMessage(true)
+      return
+    }
     setLoading(true)
     setError(null)
     const result = await createSubscription(solution.id)
@@ -166,23 +180,44 @@ export function SolutionCard({ solution }: { solution: SolutionWithSubscription 
         </div>
 
         {isActive ? (
-          <button
-            disabled
-            style={{
-              fontSize:        '11.5px',
-              fontFamily:      'monospace',
-              textTransform:   'uppercase',
-              letterSpacing:   '.1em',
-              color:           'var(--culture)',
-              background:      'rgba(47,211,184,.08)',
-              border:          '1px solid rgba(47,211,184,.22)',
-              borderRadius:    '4px',
-              padding:         '7px 14px',
-              cursor:          'default',
-            }}
-          >
-            Gestionar →
-          </button>
+          // JChat activo → enlace real al dashboard; otras soluciones → placeholder
+          isJChat ? (
+            <button
+              onClick={handleGestionarJChat}
+              style={{
+                fontSize:        '11.5px',
+                fontFamily:      'monospace',
+                textTransform:   'uppercase',
+                letterSpacing:   '.1em',
+                color:           'var(--culture)',
+                background:      'rgba(47,211,184,.08)',
+                border:          '1px solid rgba(47,211,184,.22)',
+                borderRadius:    '4px',
+                padding:         '7px 14px',
+                cursor:          'pointer',
+              }}
+            >
+              Gestionar →
+            </button>
+          ) : (
+            <button
+              disabled
+              style={{
+                fontSize:        '11.5px',
+                fontFamily:      'monospace',
+                textTransform:   'uppercase',
+                letterSpacing:   '.1em',
+                color:           'var(--culture)',
+                background:      'rgba(47,211,184,.08)',
+                border:          '1px solid rgba(47,211,184,.22)',
+                borderRadius:    '4px',
+                padding:         '7px 14px',
+                cursor:          'default',
+              }}
+            >
+              Gestionar →
+            </button>
+          )
         ) : (
           <button
             onClick={handleContratar}
@@ -206,6 +241,14 @@ export function SolutionCard({ solution }: { solution: SolutionWithSubscription 
           </button>
         )}
       </div>
+
+      {/* Mensaje para usuarios sociales que hacen clic en JChat */}
+      {jchatMessage && (
+        <p style={{ marginTop: '10px', fontSize: '12.5px', color: 'var(--haze)', lineHeight: 1.55 }}>
+          Tu perfil de JChat está en la app móvil.{' '}
+          <span style={{ color: 'var(--culture)' }}>Descárgala para gestionarlo.</span>
+        </p>
+      )}
 
       {error && (
         <p style={{ marginTop: '8px', fontSize: '12px', color: 'var(--reagent)' }}>

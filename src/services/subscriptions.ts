@@ -3,10 +3,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { Solution, Subscription, SolutionWithSubscription } from '@/lib/types'
+import { getJChatOwnerStatus } from '@/services/jchat'
 
 /**
  * Obtiene todas las soluciones con el estado de suscripción del dueño actual.
- * Todas las tablas viven en el schema `otunity` del Supabase de JChat.
+ * Todas las tablas de Otunity viven en el schema `otunity` del Supabase de JChat.
+ *
+ * Caso especial JChat: su "activación" no viene de otunity.subscriptions sino del
+ * puente a public.businesses / public.users (getJChatOwnerStatus). Si el usuario
+ * es dueño de JChat, la solución "JChat" se devuelve con jchatOwner=true, y la
+ * SolutionCard la trata como activa y redirige al dashboard de JChat.
  */
 export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubscription[]> {
   const supabase = await createClient()
@@ -14,29 +20,36 @@ export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubsc
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data: solutions, error: solError } = await supabase
-    .schema('otunity')
-    .from('solutions')
-    .select('*')
-    .eq('activa', true)
-    .order('precio_mensual', { ascending: false })
+  // Obtener soluciones, suscripciones y estado JChat en paralelo
+  const [solResult, subResult, isJChatOwner] = await Promise.all([
+    supabase
+      .schema('otunity')
+      .from('solutions')
+      .select('*')
+      .eq('activa', true)
+      .order('precio_mensual', { ascending: false }),
+    supabase
+      .schema('otunity')
+      .from('subscriptions')
+      .select('*')
+      .eq('owner_id', user.id),
+    getJChatOwnerStatus(),
+  ])
 
-  if (solError || !solutions) return []
-
-  const { data: subs } = await supabase
-    .schema('otunity')
-    .from('subscriptions')
-    .select('*')
-    .eq('owner_id', user.id)
+  if (solResult.error || !solResult.data) return []
 
   const subsBySolutionId = new Map(
-    ((subs ?? []) as Subscription[]).map((s) => [s.solution_id, s])
+    ((subResult.data ?? []) as Subscription[]).map((s) => [s.solution_id, s])
   )
 
-  return (solutions as Solution[]).map((sol) => ({
-    ...sol,
-    subscription: subsBySolutionId.get(sol.id) ?? null,
-  }))
+  return (solResult.data as Solution[]).map((sol) => {
+    const isJChat = sol.nombre.toLowerCase() === 'jchat'
+    return {
+      ...sol,
+      subscription:  subsBySolutionId.get(sol.id) ?? null,
+      jchatOwner:    isJChat ? isJChatOwner : undefined,
+    }
+  })
 }
 
 /**

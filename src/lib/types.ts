@@ -107,7 +107,10 @@ export type Solution     = Database['otunity']['Tables']['solutions']['Row']
 export type Subscription = Database['otunity']['Tables']['subscriptions']['Row']
 export type AppLink      = Database['otunity']['Tables']['app_links']['Row']
 
-// Solution con su subscription (si existe)
+// Solution con su subscription (si existe) y estado del puente JChat
 export type SolutionWithSubscription = Solution & {
-  subscription: Subscription | null
+  subscription:  Subscription | null
+  /** true cuando el usuario es dueño de JChat (negocio o plan business/pro).
+   *  Solo se activa para la solución cuyo nombre es "JChat". */
+  jchatOwner?: boolean
 }
