@@ -10,7 +10,11 @@ export async function signIn(formData: FormData) {
   const captchaToken   = (formData.get('captchaToken') as string | null) ?? undefined
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({
+
+  // Usamos data.user de signInWithPassword directamente — no getUser().
+  // getUser() justo después del login en un Server Action puede devolver null
+  // porque la sesión aún no está en las cookies del servidor en ese instante.
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
     options: { captchaToken },
@@ -23,22 +27,23 @@ export async function signIn(formData: FormData) {
   // Asegurar fila en otunity.owners para usuarios existentes de JChat
   // que entran al portal por primera vez. ignoreDuplicates evita sobreescribir
   // si ya existe (p.ej. registro previo por el portal).
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = data.user
   if (user) {
     const nombre =
       (user.user_metadata?.nombre as string | undefined)
       ?? (user.user_metadata?.full_name as string | undefined)
       ?? (user.user_metadata?.name as string | undefined)
       ?? ''
-    await supabase
+    const { error: ownerErr } = await supabase
       .schema('otunity')
       .from('owners')
       .upsert(
         { id: user.id, email: user.email!, nombre },
         { onConflict: 'id', ignoreDuplicates: true },
       )
-    // Si falla el upsert, no bloqueamos el login — el nombre queda vacío y
-    // el dueño lo edita en el portal. El error se ignora intencionalmente.
+    // Loguear si falla — visible en Vercel logs para diagnóstico.
+    // No bloqueamos el login; el nombre queda vacío y se edita en el portal.
+    if (ownerErr) console.error('[signIn] otunity.owners upsert:', ownerErr.message)
   }
 
   revalidatePath('/', 'layout')
