@@ -20,6 +20,27 @@ export async function signIn(formData: FormData) {
     return { error: error.message }
   }
 
+  // Asegurar fila en otunity.owners para usuarios existentes de JChat
+  // que entran al portal por primera vez. ignoreDuplicates evita sobreescribir
+  // si ya existe (p.ej. registro previo por el portal).
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const nombre =
+      (user.user_metadata?.nombre as string | undefined)
+      ?? (user.user_metadata?.full_name as string | undefined)
+      ?? (user.user_metadata?.name as string | undefined)
+      ?? ''
+    await supabase
+      .schema('otunity')
+      .from('owners')
+      .upsert(
+        { id: user.id, email: user.email!, nombre },
+        { onConflict: 'id', ignoreDuplicates: true },
+      )
+    // Si falla el upsert, no bloqueamos el login — el nombre queda vacío y
+    // el dueño lo edita en el portal. El error se ignora intencionalmente.
+  }
+
   revalidatePath('/', 'layout')
   redirect('/dashboard')
 }
@@ -31,11 +52,17 @@ export async function signUp(formData: FormData) {
   const captchaToken = (formData.get('captchaToken') as string | null) ?? undefined
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+
+  // Mandamos el nombre en los tres campos que leen distintos sistemas:
+  //   • nombre     → leído por el portal Otunity
+  //   • full_name  → leído por el trigger de JChat (handle_new_auth_user)
+  //   • name       → fallback del mismo trigger
+  // Así un registro único puebla ambos mundos correctamente.
+  const { data: { user }, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { nombre },
+      data: { nombre, full_name: nombre, name: nombre },
       captchaToken,
       // confirmación de email desactivada en Fase 1
     },
@@ -43,6 +70,24 @@ export async function signUp(formData: FormData) {
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Crear fila en otunity.owners. Se usa upsert con ignoreDuplicates por
+  // robustez (no debería existir, pero evita error si hubiera race condition).
+  if (user) {
+    const { error: ownerError } = await supabase
+      .schema('otunity')
+      .from('owners')
+      .upsert(
+        { id: user.id, email: user.email!, nombre },
+        { onConflict: 'id', ignoreDuplicates: true },
+      )
+
+    if (ownerError) {
+      // En Fase 1 logueamos pero no bloqueamos al usuario — puede continuar
+      // y el nombre quedará vacío hasta que lo edite.
+      console.error('[signUp] Error creando otunity.owners:', ownerError.message)
+    }
   }
 
   revalidatePath('/', 'layout')

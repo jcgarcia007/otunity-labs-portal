@@ -13,6 +13,7 @@ export default async function DashboardPage() {
   let firstName = 'dueño'
   if (user) {
     const { data } = await supabase
+      .schema('otunity')
       .from('owners')
       .select('nombre')
       .eq('id', user.id)

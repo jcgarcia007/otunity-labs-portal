@@ -1,5 +1,6 @@
-// Tipos manuales alineados con el schema de Supabase.
-// Cuando Supabase genere tipos automáticos, reemplazar con: npx supabase gen types typescript
+// Tipos manuales alineados con el schema `otunity` del Supabase de JChat (klfsgcfoahdtkojyqspd).
+// Cuando Supabase genere tipos automáticos, reemplazar con:
+//   npx supabase gen types typescript --schema otunity
 
 export type Json =
   | string
@@ -10,7 +11,7 @@ export type Json =
   | Json[]
 
 export interface Database {
-  public: {
+  otunity: {
     Tables: {
       owners: {
         Row: {
@@ -55,7 +56,7 @@ export interface Database {
           destacada?: boolean
           created_at?: string
         }
-        Update: Partial<Database['public']['Tables']['solutions']['Insert']>
+        Update: Partial<Database['otunity']['Tables']['solutions']['Insert']>
       }
       subscriptions: {
         Row: {
@@ -74,7 +75,7 @@ export interface Database {
           stripe_sub_id?: string | null
           created_at?: string
         }
-        Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>
+        Update: Partial<Database['otunity']['Tables']['subscriptions']['Insert']>
       }
       app_links: {
         Row: {
@@ -91,7 +92,7 @@ export interface Database {
           app_user_id: string
           created_at?: string
         }
-        Update: Partial<Database['public']['Tables']['app_links']['Insert']>
+        Update: Partial<Database['otunity']['Tables']['app_links']['Insert']>
       }
     }
     Views: Record<string, never>
@@ -101,10 +102,10 @@ export interface Database {
 }
 
 // Tipos de conveniencia
-export type Owner = Database['public']['Tables']['owners']['Row']
-export type Solution = Database['public']['Tables']['solutions']['Row']
-export type Subscription = Database['public']['Tables']['subscriptions']['Row']
-export type AppLink = Database['public']['Tables']['app_links']['Row']
+export type Owner        = Database['otunity']['Tables']['owners']['Row']
+export type Solution     = Database['otunity']['Tables']['solutions']['Row']
+export type Subscription = Database['otunity']['Tables']['subscriptions']['Row']
+export type AppLink      = Database['otunity']['Tables']['app_links']['Row']
 
 // Solution con su subscription (si existe)
 export type SolutionWithSubscription = Solution & {

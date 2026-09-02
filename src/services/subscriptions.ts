@@ -6,6 +6,7 @@ import type { Solution, Subscription, SolutionWithSubscription } from '@/lib/typ
 
 /**
  * Obtiene todas las soluciones con el estado de suscripción del dueño actual.
+ * Todas las tablas viven en el schema `otunity` del Supabase de JChat.
  */
 export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubscription[]> {
   const supabase = await createClient()
@@ -14,6 +15,7 @@ export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubsc
   if (!user) return []
 
   const { data: solutions, error: solError } = await supabase
+    .schema('otunity')
     .from('solutions')
     .select('*')
     .eq('activa', true)
@@ -22,6 +24,7 @@ export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubsc
   if (solError || !solutions) return []
 
   const { data: subs } = await supabase
+    .schema('otunity')
     .from('subscriptions')
     .select('*')
     .eq('owner_id', user.id)
@@ -46,6 +49,7 @@ export async function getOwnerMetrics(): Promise<{ activas: number; gastoMensual
   if (!user) return { activas: 0, gastoMensual: 0 }
 
   const { data: subs } = await supabase
+    .schema('otunity')
     .from('subscriptions')
     .select('solution_id, estado')
     .eq('owner_id', user.id)
@@ -56,6 +60,7 @@ export async function getOwnerMetrics(): Promise<{ activas: number; gastoMensual
 
   const solutionIds = activeSubs.map((s) => s.solution_id)
   const { data: solutions } = await supabase
+    .schema('otunity')
     .from('solutions')
     .select('id, precio_mensual')
     .in('id', solutionIds)
@@ -80,6 +85,7 @@ export async function createSubscription(
   if (!user) return { error: 'No autenticado' }
 
   const { error } = await supabase
+    .schema('otunity')
     .from('subscriptions')
     .insert({
       owner_id: user.id,
