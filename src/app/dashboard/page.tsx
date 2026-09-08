@@ -5,7 +5,17 @@ import { MetricsBar } from '@/components/dashboard/MetricsBar'
 import { SolutionCard } from '@/components/dashboard/SolutionCard'
 import type { Owner } from '@/lib/types'
 
-export default async function DashboardPage() {
+/** Solución de hostelería rebrandeada — Tab POS llega aquí con ?from=tab-pos */
+const isTabPos = (nombre: string) => nombre.toLowerCase() === 'tab pos'
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>
+}) {
+  const { from } = await searchParams
+  const fromTabPos = from === 'tab-pos'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -22,7 +32,11 @@ export default async function DashboardPage() {
     firstName = nombre?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'dueño'
   }
 
-  const solutions = await getSolutionsWithSubscriptions()
+  const fetched   = await getSolutionsWithSubscriptions()
+  // Viniendo de Tab POS, su tarjeta va primero y resaltada
+  const solutions = fromTabPos
+    ? [...fetched].sort((a, b) => Number(isTabPos(b.nombre)) - Number(isTabPos(a.nombre)))
+    : fetched
   const activas   = solutions.filter(s => s.subscription?.estado === 'active').length
 
   return (
@@ -61,6 +75,28 @@ export default async function DashboardPage() {
           }
         </p>
       </div>
+
+      {/* ── Bienvenida desde Tab POS ───────────── */}
+      {fromTabPos && (
+        <div style={{
+          display:         'flex',
+          alignItems:      'center',
+          gap:             '12px',
+          padding:         '14px 16px',
+          marginBottom:    '24px',
+          border:          '1px solid rgba(255,106,61,.35)',
+          backgroundColor: 'rgba(255,106,61,.06)',
+          borderRadius:    '6px',
+        }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--reagent)', flexShrink: 0 }} />
+          <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--clear)', lineHeight: 1.5 }}>
+            Tu cuenta Otunity ya está lista.{' '}
+            <span style={{ color: 'var(--haze)' }}>
+              Tab POS aparece destacada abajo — actívala cuando quieras; la misma cuenta sirve para todas las soluciones.
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* ── Métricas ───────────────────────────── */}
       <Suspense fallback={null}>
@@ -102,7 +138,11 @@ export default async function DashboardPage() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(370px, 1fr))',
         }}>
           {solutions.map((sol) => (
-            <SolutionCard key={sol.id} solution={sol} />
+            <SolutionCard
+              key={sol.id}
+              solution={sol}
+              highlight={fromTabPos && isTabPos(sol.nombre)}
+            />
           ))}
         </div>
       )}

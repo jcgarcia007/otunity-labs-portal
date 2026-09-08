@@ -43,11 +43,13 @@ export async function getSolutionsWithSubscriptions(): Promise<SolutionWithSubsc
   )
 
   return (solResult.data as Solution[]).map((sol) => {
-    const isJChat = sol.nombre.toLowerCase() === 'jchat'
+    // JChat y Tab POS (su POS rebrandeado) comparten el puente de dueño
+    const nombre    = sol.nombre.toLowerCase()
+    const isBridged = nombre === 'jchat' || nombre === 'tab pos'
     return {
       ...sol,
       subscription:  subsBySolutionId.get(sol.id) ?? null,
-      jchatOwner:    isJChat ? isJChatOwner : undefined,
+      jchatOwner:    isBridged ? isJChatOwner : undefined,
     }
   })
 }

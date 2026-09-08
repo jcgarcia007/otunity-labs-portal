@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  MapPin, Sparkles, Users, Calculator, Box, Globe,
+  MapPin, Sparkles, Users, Calculator, Box, Globe, Receipt,
   CheckCircle2, type LucideIcon,
 } from 'lucide-react'
 import { formatPrecio } from '@/lib/utils'
@@ -17,10 +17,12 @@ const ICON_MAP: Record<string, LucideIcon> = {
   calculator:  Calculator,
   box:         Box,
   globe:       Globe,
+  receipt:     Receipt,
 }
 
 /* ── Acento por categoría ─────────────────────────────────────── */
 const CAT_COLOR: Record<string, string> = {
+  Hostelería:    '#FF6A3D',  // reagent/orange — JChat y Tab POS
   Comunidad:     '#2FD3B8',  // culture/teal
   Productividad: '#9B5EE8',  // purple
   Ventas:        '#5C7CFA',  // brand blue
@@ -30,18 +32,27 @@ const CAT_COLOR: Record<string, string> = {
 }
 
 /* ── Componente ───────────────────────────────────────────────── */
-export function SolutionCard({ solution }: { solution: SolutionWithSubscription }) {
+export function SolutionCard({
+  solution,
+  highlight = false,
+}: {
+  solution:   SolutionWithSubscription
+  /** true cuando el usuario llega desde Tab POS y esta es su tarjeta */
+  highlight?: boolean
+}) {
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState<string | null>(null)
   const [jchatMessage, setJchatMessage] = useState(false)
 
-  const Icon     = ICON_MAP[solution.icono] ?? Globe
-  const isJChat  = solution.nombre.toLowerCase() === 'jchat'
-  // JChat activo si: dueño de JChat (puente) O tiene suscripción de Otunity
-  const isActive = isJChat
+  const Icon      = ICON_MAP[solution.icono] ?? Globe
+  const nombre    = solution.nombre.toLowerCase()
+  const isJChat   = nombre === 'jchat'
+  // JChat y Tab POS comparten backend: ambas se "activan" por el puente de dueño
+  const isBridged = isJChat || nombre === 'tab pos'
+  const isActive  = isBridged
     ? !!(solution.jchatOwner || solution.subscription?.estado === 'active')
     : solution.subscription?.estado === 'active'
-  const accent   = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
+  const accent    = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
 
   function handleGestionarJChat() {
     window.open('https://jchat.cloud/dashboard', '_blank', 'noopener,noreferrer')
@@ -67,17 +78,38 @@ export function SolutionCard({ solution }: { solution: SolutionWithSubscription 
         display:         'flex',
         flexDirection:   'column',
         backgroundColor: 'var(--chamber)',
-        border:          `1px solid ${isActive ? 'rgba(47,211,184,.45)' : 'var(--line)'}`,
+        border:          `1px solid ${
+          highlight ? `${accent}99` : isActive ? 'rgba(47,211,184,.45)' : 'var(--line)'
+        }`,
         borderRadius:    '6px',
         padding:         '20px',
         transition:      'border-color .2s, box-shadow .2s',
-        boxShadow:       isActive
-          ? '0 0 0 1px rgba(47,211,184,.1), 0 4px 20px rgba(47,211,184,.06)'
-          : 'none',
+        boxShadow:       highlight
+          ? `0 0 0 1px ${accent}33, 0 6px 28px ${accent}22`
+          : isActive
+            ? '0 0 0 1px rgba(47,211,184,.1), 0 4px 20px rgba(47,211,184,.06)'
+            : 'none',
       }}
     >
-      {/* Badge "Destacada" */}
-      {solution.destacada && !isActive && (
+      {/* Badge "Tu solución" (viene de Tab POS) o "Destacada" */}
+      {highlight ? (
+        <div style={{
+          position:        'absolute',
+          top:             '-1px',
+          right:           '18px',
+          backgroundColor: accent,
+          color:           '#05090C',
+          fontSize:        '9px',
+          fontFamily:      'monospace',
+          fontWeight:      700,
+          textTransform:   'uppercase',
+          letterSpacing:   '.12em',
+          padding:         '3px 10px',
+          borderRadius:    '0 0 5px 5px',
+        }}>
+          Tu solución
+        </div>
+      ) : solution.destacada && !isActive && (
         <div style={{
           position:        'absolute',
           top:             '-1px',
@@ -180,8 +212,8 @@ export function SolutionCard({ solution }: { solution: SolutionWithSubscription 
         </div>
 
         {isActive ? (
-          // JChat activo → enlace real al dashboard; otras soluciones → placeholder
-          isJChat ? (
+          // JChat / Tab POS activas → enlace real al dashboard; otras → placeholder
+          isBridged ? (
             <button
               onClick={handleGestionarJChat}
               style={{
