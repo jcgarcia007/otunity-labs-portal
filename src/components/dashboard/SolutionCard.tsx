@@ -44,15 +44,21 @@ export function SolutionCard({
   const Icon      = ICON_MAP[solution.icono] ?? Globe
   const nombre    = solution.nombre.toLowerCase()
   const isJChat   = nombre === 'jchat'
+  const isTabPos  = nombre === 'tab pos'
   // JChat y Tab POS comparten backend: ambas se "activan" por el puente de dueño
-  const isBridged = isJChat || nombre === 'tab pos'
+  const isBridged = isJChat || isTabPos
   const isActive  = isBridged
     ? !!(solution.jchatOwner || solution.subscription?.estado === 'active')
     : solution.subscription?.estado === 'active'
   const accent    = CAT_COLOR[solution.categoria] ?? '#5C7CFA'
 
-  function handleGestionarJChat() {
-    window.open('https://jchat.cloud/dashboard', '_blank', 'noopener,noreferrer')
+  // Cada solución abre su propio dominio: Tab POS entra por dashboard.tabpos.cloud
+  // (JChat web con skin Tab POS, D-82); JChat sigue en jchat.cloud.
+  function handleGestionar() {
+    const url = isTabPos
+      ? 'https://dashboard.tabpos.cloud/dashboard'
+      : 'https://jchat.cloud/dashboard'
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   async function handleContratar() {
@@ -191,7 +197,7 @@ export function SolutionCard({
           // JChat / Tab POS activas → enlace real al dashboard; otras → placeholder
           isBridged ? (
             <button
-              onClick={handleGestionarJChat}
+              onClick={handleGestionar}
               style={{
                 fontSize:        '11.5px',
                 fontFamily:      'monospace',
